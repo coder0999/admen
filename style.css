@@ -77,7 +77,7 @@ body {
 
 .conversation-details {
     flex-grow: 1;
-    text-align: right; /* RTL support */
+    text-align: right; /* Inherited from body, but good to be explicit */
 }
 
 .conversation-name {
@@ -103,14 +103,13 @@ body {
     background-color: var(--light-gray);
     padding: 10px 20px;
     border-bottom: 1px solid #DDD;
-    font-weight: bold;
     display: flex;
     align-items: center;
-    flex-direction: row-reverse; /* RTL support */
-    cursor: pointer;
+    justify-content: flex-end; /* RTL support */
 }
 
-.chat-header .profile-pic {
+#header-pfp {
+    cursor: pointer;
     width: 40px;
     height: 40px;
 }
@@ -121,7 +120,6 @@ body {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    align-items: flex-end; /* RTL support */
 }
 
 .message {
@@ -134,24 +132,23 @@ body {
 
 .message.user {
     background-color: var(--user-message-bg);
-    align-self: flex-end; /* RTL: user messages on the right */
+    align-self: flex-start; /* RTL: user messages on the left */
 }
 
 .message.bot {
     background-color: var(--bot-message-bg);
-    align-self: flex-start; /* RTL: bot messages on the left */
+    align-self: flex-end; /* RTL: bot messages on the right */
 }
 
 /* Modal Styles */
 .modal {
-    display: none; /* Hidden by default */
+    display: none;
     position: fixed;
     z-index: 1000;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
     background-color: rgba(0,0,0,0.4);
 }
 
@@ -164,6 +161,14 @@ body {
     max-width: 500px;
     border-radius: 8px;
     position: relative;
+    height: 60vh; /* Fixed height */
+    display: flex;
+    flex-direction: column;
+}
+
+#history-content {
+    overflow-y: auto; /* Scrollable content */
+    flex-grow: 1;
 }
 
 .close-button {
@@ -182,20 +187,35 @@ body {
     color: black;
 }
 
-#history-content .history-item {
+.history-item {
+    display: flex;
+    flex-direction: column; /* Stack image and text vertically */
+    align-items: flex-end; /* Align content to the right */
     padding: 10px;
     border-bottom: 1px solid #eee;
 }
-#history-content .history-item:last-child {
+.history-item:last-child {
     border-bottom: none;
 }
-#history-content p {
+.history-item .profile-pic {
+    width: 50px; /* Adjust size as needed */
+    height: 50px;
+    border-radius: 50%;
+    margin-bottom: 10px; /* Space between image and text */
+    object-fit: cover;
+}
+.history-details {
+    display: flex;
+    flex-direction: column;
+    text-align: right; /* Align text within details to the right */
+}
+.history-details p {
     margin: 0;
 }
-#history-content .history-name {
+.history-name {
     font-weight: bold;
 }
-#history-content .history-date {
+.history-date {
     font-size: 0.8em;
     color: #888;
 }
@@ -221,15 +241,4 @@ body {
         display: flex;
         align-items: center;
     }
-    .back-button {
-        margin-left: 15px; /* RTL support */
-        margin-right: 0; /* RTL support */
-        font-size: 20px;
-        cursor: pointer;
-        display: block !important;
-    }
-}
-
-.back-button {
-    display: none;
 }

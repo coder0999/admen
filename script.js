@@ -78,7 +78,7 @@ function loadConversations() {
                 });
 
                 convElement.onclick = () => {
-                    loadMessages(convId, pushName, pfpUrl);
+                    loadMessages(convId);
                     container.classList.add('chat-active');
                     document.querySelectorAll('.conversation-item').forEach(item => item.classList.remove('active'));
                     convElement.classList.add('active');
@@ -104,6 +104,14 @@ async function showProfileHistory(convId) {
                 const item = document.createElement('div');
                 item.className = 'history-item';
                 
+                const pfp = document.createElement('img');
+                pfp.className = 'profile-pic';
+                pfp.src = record.pfpUrl || 'https://via.placeholder.com/50';
+                pfp.onerror = () => { pfp.src = 'https://via.placeholder.com/50'; };
+
+                const detailsDiv = document.createElement('div');
+                detailsDiv.className = 'history-details'; // Use a class for further styling
+
                 const name = document.createElement('p');
                 name.className = 'history-name';
                 name.textContent = record.pushName || 'N/A';
@@ -112,8 +120,11 @@ async function showProfileHistory(convId) {
                 date.className = 'history-date';
                 date.textContent = record.capturedAt ? new Date(record.capturedAt.seconds * 1000).toLocaleString() : 'Date unknown';
 
-                item.appendChild(name);
-                item.appendChild(date);
+                detailsDiv.appendChild(name);
+                detailsDiv.appendChild(date);
+                
+                item.appendChild(pfp);
+                item.appendChild(detailsDiv);
                 historyContent.appendChild(item);
             });
         } else {
@@ -127,24 +138,25 @@ async function showProfileHistory(convId) {
 
 
 // Function to load messages for a conversation
-function loadMessages(convId, pushName, pfpUrl) {
+async function loadMessages(convId) {
     if (currentConversation === convId) return;
-
+    
     currentConversation = convId;
     messagesArea.innerHTML = ''; 
 
+    // Fetch latest profile info for the header
+    const docRef = doc(db, "conversations", convId);
+    const docSnap = await getDoc(docRef);
+    let pfpUrl = 'https://via.placeholder.com/50';
+    if(docSnap.exists() && docSnap.data().profileHistory.length > 0) {
+        pfpUrl = docSnap.data().profileHistory[docSnap.data().profileHistory.length - 1].pfpUrl;
+    }
+
     chatHeader.innerHTML = `
-        <span class="back-button" id="back-btn">&larr;</span>
-        <div class="chat-header-info">
-            <img src="${pfpUrl}" class="profile-pic" onerror="this.src='https://via.placeholder.com/50'">
-            <p>${pushName}</p>
-        </div>
+        <img src="${pfpUrl}" id="header-pfp" class="profile-pic" onerror="this.src='https://via.placeholder.com/50'">
     `;
-    document.getElementById('back-btn').onclick = goBack;
-
-    // Add click listener to show history
-    chatHeader.querySelector('.chat-header-info').onclick = () => showProfileHistory(convId);
-
+    
+    document.getElementById('header-pfp').onclick = () => showProfileHistory(convId);
 
     if (unsubscribeMessages) {
         unsubscribeMessages();
@@ -170,20 +182,6 @@ function loadMessages(convId, pushName, pfpUrl) {
             }
         });
     });
-}
-
-// Function to go back to conversation list on mobile
-function goBack() {
-    // We stop the propagation to prevent the chat header's onclick from firing
-    event.stopPropagation(); 
-    container.classList.remove('chat-active');
-    currentConversation = null;
-    chatHeader.innerHTML = '<p>Select a conversation</p>';
-    chatHeader.onclick = null;
-    if (unsubscribeMessages) {
-        unsubscribeMessages();
-        unsubscribeMessages = null;
-    }
 }
 
 // Close modal events
