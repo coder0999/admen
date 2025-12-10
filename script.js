@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, getDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCHowKtRMu0CrM17Td7ah6pxib8pdCCcHs",
@@ -20,6 +20,12 @@ const messagesArea = document.getElementById('messages-area');
 const chatHeader = document.getElementById('chat-header');
 const container = document.querySelector('.container');
 
+// Modal elements
+const modal = document.getElementById('profile-modal');
+const closeModal = document.querySelector('.close-button');
+const historyContent = document.getElementById('history-content');
+
+
 let currentConversation = null;
 let unsubscribeMessages = null;
 
@@ -32,7 +38,6 @@ function loadConversations() {
                 const convData = change.doc.data();
                 const convId = change.doc.id;
                 
-                // Get the latest profile data
                 const pushName = (convData.profileHistory && convData.profileHistory.length > 0)
                     ? convData.profileHistory[convData.profileHistory.length - 1].pushName
                     : 'Unknown User';
@@ -40,16 +45,14 @@ function loadConversations() {
                     ? convData.profileHistory[convData.profileHistory.length - 1].pfpUrl
                     : 'https://via.placeholder.com/50';
 
-
                 let convElement = document.getElementById(convId);
                 if (!convElement) {
                     convElement = document.createElement('div');
                     convElement.id = convId;
                     convElement.classList.add('conversation-item');
-                    convList.prepend(convElement); // Prepend to show newest first
+                    convList.prepend(convElement);
                 }
 
-                // Update content
                 convElement.innerHTML = `
                     <img src="${pfpUrl}" alt="Profile" class="profile-pic" onerror="this.src='https://via.placeholder.com/50'">
                     <div class="conversation-details">
@@ -58,7 +61,6 @@ function loadConversations() {
                     </div>
                 `;
 
-                // Fetch last message for each conversation
                 const messagesQuery = query(collection(db, 'conversations', convId, 'messages'), orderBy('timestamp', 'desc'));
                 onSnapshot(messagesQuery, msgSnapshot => {
                     if (!msgSnapshot.empty) {
@@ -86,6 +88,43 @@ function loadConversations() {
     });
 }
 
+// Function to show profile history
+async function showProfileHistory(convId) {
+    const docRef = doc(db, "conversations", convId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        const history = data.profileHistory || [];
+        historyContent.innerHTML = ''; // Clear previous history
+
+        if (history.length > 0) {
+            // Reverse the array to show newest first
+            history.reverse().forEach(record => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                
+                const name = document.createElement('p');
+                name.className = 'history-name';
+                name.textContent = record.pushName || 'N/A';
+
+                const date = document.createElement('p');
+                date.className = 'history-date';
+                date.textContent = record.capturedAt ? new Date(record.capturedAt.seconds * 1000).toLocaleString() : 'Date unknown';
+
+                item.appendChild(name);
+                item.appendChild(date);
+                historyContent.appendChild(item);
+            });
+        } else {
+            historyContent.textContent = 'No profile history found.';
+        }
+        modal.style.display = 'block';
+    } else {
+        alert("Could not find conversation data.");
+    }
+}
+
 
 // Function to load messages for a conversation
 function loadMessages(convId, pushName, pfpUrl) {
@@ -96,12 +135,17 @@ function loadMessages(convId, pushName, pfpUrl) {
 
     chatHeader.innerHTML = `
         <span class="back-button" id="back-btn">&larr;</span>
-        <img src="${pfpUrl}" class="profile-pic" onerror="this.src='https://via.placeholder.com/50'">
-        <p>${pushName}</p>
+        <div class="chat-header-info">
+            <img src="${pfpUrl}" class="profile-pic" onerror="this.src='https://via.placeholder.com/50'">
+            <p>${pushName}</p>
+        </div>
     `;
     document.getElementById('back-btn').onclick = goBack;
 
-    // Unsubscribe from previous listener
+    // Add click listener to show history
+    chatHeader.querySelector('.chat-header-info').onclick = () => showProfileHistory(convId);
+
+
     if (unsubscribeMessages) {
         unsubscribeMessages();
     }
@@ -130,13 +174,29 @@ function loadMessages(convId, pushName, pfpUrl) {
 
 // Function to go back to conversation list on mobile
 function goBack() {
+    // We stop the propagation to prevent the chat header's onclick from firing
+    event.stopPropagation(); 
     container.classList.remove('chat-active');
     currentConversation = null;
+    chatHeader.innerHTML = '<p>Select a conversation</p>';
+    chatHeader.onclick = null;
     if (unsubscribeMessages) {
         unsubscribeMessages();
         unsubscribeMessages = null;
     }
 }
+
+// Close modal events
+closeModal.onclick = () => {
+    modal.style.display = 'none';
+};
+
+window.onclick = (event) => {
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+};
+
 
 // Initial load
 loadConversations();
