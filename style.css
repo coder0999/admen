@@ -242,3 +242,12 @@ body {
         align-items: center;
     }
 }
+
+.chat-header-info {
+    margin-right: 15px;
+}
+
+.chat-header-name {
+    font-weight: bold;
+    margin: 0;
+}

@@ -37,6 +37,7 @@ function loadConversations() {
             if (change.type === 'added' || change.type === 'modified') {
                 const convData = change.doc.data();
                 const convId = change.doc.id;
+                const remoteJidAlt = convData.remoteJidAlt || ''; // New
                 
                 const pushName = (convData.profileHistory && convData.profileHistory.length > 0)
                     ? convData.profileHistory[convData.profileHistory.length - 1].pushName
@@ -148,12 +149,24 @@ async function loadMessages(convId) {
     const docRef = doc(db, "conversations", convId);
     const docSnap = await getDoc(docRef);
     let pfpUrl = 'https://via.placeholder.com/50';
-    if(docSnap.exists() && docSnap.data().profileHistory.length > 0) {
-        pfpUrl = docSnap.data().profileHistory[docSnap.data().profileHistory.length - 1].pfpUrl;
+    let remoteJidAlt = ''; // متغير لتخزين remoteJidAlt
+    if(docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.profileHistory && data.profileHistory.length > 0) {
+            pfpUrl = data.profileHistory[data.profileHistory.length - 1].pfpUrl;
+        }
+        if (data.remoteJidAlt) {
+            remoteJidAlt = data.remoteJidAlt; // الحصول على remoteJidAlt
+        }
     }
+
+    const formattedPhoneNumber = formatPhoneNumber(remoteJidAlt);
 
     chatHeader.innerHTML = `
         <img src="${pfpUrl}" id="header-pfp" class="profile-pic" onerror="this.src='https://via.placeholder.com/50'">
+        <div class="chat-header-info">
+            <p class="chat-header-name">${formattedPhoneNumber}</p> <!-- عرض remoteJidAlt -->
+        </div>
     `;
     
     document.getElementById('header-pfp').onclick = () => showProfileHistory(convId);
@@ -194,6 +207,15 @@ window.onclick = (event) => {
         modal.style.display = 'none';
     }
 };
+
+function formatPhoneNumber(jid) {
+    if (!jid) return '';
+    let number = jid.split('@')[0];
+    if (number.startsWith('20')) {
+        number = '0' + number.substring(2);
+    }
+    return number;
+}
 
 
 // Initial load
